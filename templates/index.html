@@ -1,27 +1,21 @@
 <!DOCTYPE html>
-<html>
-    <head>
-        <meta charset="UTF-8">
-        <title>HIRE APP</title>
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Pacifico" type="text/css">
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Arimo" type="text/css">
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Hind:300" type="text/css">
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans+Condensed:300" type="text/css">
-    </head>
-    <body>
-        <div>
-            <h1>HIRE APP</h1>
-            <h1>Upload new File</h1>
-            <form method=post enctype=multipart/form-data>
-                <input type=file name=file>
-                <input type=submit value=Upload>
-            </form>
-            <form action="{{ url_for('predict')}}" method="post">
-                <button type="submit" class="btn btn-primary btn-block btn-large">Predict</button>
-            </form>
-            <br>
-            <br>
-            {{ prediction_text }}
-        </div>
-    </body>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume Ranking</title>
+</head>
+<body>
+    <h1>Resume Ranking</h1>
+    <form action="/" method="post" enctype="multipart/form-data">
+        <label for="job_description">Job Description:</label><br>
+        <textarea id="job_description" name="job_description" rows="5" cols="50"></textarea><br><br>
+        
+        <label for="resumes">Upload Resumes:</label><br>
+        <input type="file" id="resumes" name="resumes" accept=".pdf" multiple><br><br>
+
+        <button type="submit">Rank Resumes</button>
+    </form>
+</body>
 </html>

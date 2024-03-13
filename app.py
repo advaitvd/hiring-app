@@ -1,68 +1,70 @@
-from flask import Flask, request, jsonify, render_template, redirect, url_for
+from flask import Flask, render_template, request
 from werkzeug.utils import secure_filename
-from modules.feature_extractor import FeatureExtractor
-from modules.text_extractor import TextExtractor
+from pypdf import PdfReader
+import torch
 from torch.nn.functional import cosine_similarity
+from modules.feature_extractor import FeatureExtractor
 import os
 
-UPLOAD_FOLDER = 'data/'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app = Flask(__name__)
+
+app.static_folder = 'templates/static'
+
+UPLOAD_FOLDER = 'data'
 ALLOWED_EXTENSIONS = {'pdf'}
 
-app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
-text_extractor = TextExtractor()
 feature_extractor = FeatureExtractor()
 
-@app.route('/')
-def home():
-    return render_template('index.html')
-
-
 def allowed_file(filename):
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def extract_text_from_pdf(file):
+    reader = PdfReader(file)
+    text = ''
+    for page in reader.pages:
+        text += '\n' + page.extract_text()
+
+    text = text.replace('\n', ' ').strip()
+    return text
+
+def calculate_similarity(job_description, resume):
+    job_features = feature_extractor(job_description)
+    resume_features = feature_extractor(resume)
+    similarity = cosine_similarity(job_features, resume_features).item()
+    return round(similarity, 4)
 
 @app.route('/', methods=['GET', 'POST'])
-def upload_file():
+def index():
     if request.method == 'POST':
-        # check if the post request has the file part
-        if 'file' not in request.files:
-            flash('No file part')
-            return redirect(request.url)
-        file = request.files['file']
-        # if user does not select file, browser also
-        # submit an empty part without filename
-        if file.filename == '':
-            flash('No selected file')
-            return redirect(request.url)
-        if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            return redirect(url_for('upload_file',
-                                    filename=filename))
-    return '''
-    <!doctype html>
-    <title>Upload new File</title>
-    <h1>Upload new File</h1>
-    <form method=post enctype=multipart/form-data>
-      <input type=file name=file>
-      <input type=submit value=Upload>
-    </form>
-    '''
+        # Get job description from the form
+        job_description = request.form['job_description']
+        ranked_resumes = []
 
-@app.route('/predict', methods=['POST'])
-def predict():
-    text_resume = text_extractor('advait_resume.pdf', file_extension='pdf')
-    vector_resume = feature_extractor(text_resume)
+        # Iterate through uploaded resume files
+        for file in request.files.getlist('resumes'):
+            if file and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(file_path)
 
-    text_requirements = 'Skills:  AWS, Databricks, Leadership, Communication'
-    vector_requirements = feature_extractor(text_requirements)
-    
-    similarity_score = cosine_similarity(vector_resume, vector_requirements).cpu().detach().numpy()[0]
+                # Extract text from the resume PDF
+                resume_text = extract_text_from_pdf(file_path)
 
-    return render_template('index.html', prediction_text=f'{similarity_score:.4f}')
+                # Calculate similarity score
+                similarity = calculate_similarity(job_description, resume_text)
 
-if __name__=="__main__":
+                # Add resume and similarity score to the ranked list
+                ranked_resumes.append((filename, similarity))
+
+        # Sort resumes based on similarity score
+        ranked_resumes.sort(key=lambda x: x[1], reverse=True)
+
+        return render_template('result.html', ranked_resumes=ranked_resumes)
+
+    return render_template('index.html')
+
+if __name__ == '__main__':
     app.run(debug=True)
