@@ -4,6 +4,7 @@ from pypdf import PdfReader
 import torch
 from torch.nn.functional import cosine_similarity
 from modules.feature_extractor import FeatureExtractor
+from modules.text_extractor import TextExtractor
 import os
 
 app = Flask(__name__)
@@ -17,17 +18,13 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 feature_extractor = FeatureExtractor()
+text_extractor = TextExtractor()
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def extract_text_from_pdf(file):
-    reader = PdfReader(file)
-    text = ''
-    for page in reader.pages:
-        text += '\n' + page.extract_text()
-
-    text = text.replace('\n', ' ').strip()
+    text = text_extractor(file)
     return text
 
 def calculate_similarity(job_description, resume):
