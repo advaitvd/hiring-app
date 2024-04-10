@@ -27,8 +27,7 @@ def extract_text_from_pdf(file):
     text = text_extractor(file)
     return text
 
-def calculate_similarity(job_description, resume):
-    job_features = feature_extractor(job_description)
+def calculate_similarity(job_features, resume):
     resume_features = feature_extractor(resume)
     similarity = cosine_similarity(job_features, resume_features).item()
     return round(similarity, 4)
@@ -38,6 +37,7 @@ def index():
     if request.method == 'POST':
         # Get job description from the form
         job_description = request.form['job_description']
+        job_features = feature_extractor(job_description)
         ranked_resumes = []
 
         # Iterate through uploaded resume files
@@ -51,7 +51,7 @@ def index():
                 resume_text = extract_text_from_pdf(file_path)
 
                 # Calculate similarity score
-                similarity = calculate_similarity(job_description, resume_text)
+                similarity = calculate_similarity(job_features, resume_text)
 
                 # Add resume and similarity score to the ranked list
                 ranked_resumes.append((filename, similarity))
