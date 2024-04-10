@@ -8,10 +8,16 @@ class FeatureExtractor():
     self.model = BartModel.from_pretrained('facebook/bart-base')
 
   def forward(self, sentence):
+    context_length = 2048
     with torch.no_grad():
-        x = self.tokenizer(sentence, return_tensors='pt')
-        out = self.model(**x)
-    return out.last_hidden_state
+        X = []
+        for idx in range(0, len(sentence), context_length):
+          x = self.tokenizer(sentence[idx: idx + context_length], return_tensors='pt')
+          out = self.model(**x)
+          X.append(out.last_hidden_state)
+    X = torch.concat(X, dim=1)
+    print("Feature Shape:", X.shape)
+    return X
   
   def __call__(self, sentence):
     feats = self.forward(sentence)
