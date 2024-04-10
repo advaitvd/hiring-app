@@ -55,6 +55,7 @@ def index():
 
                 # Add resume and similarity score to the ranked list
                 ranked_resumes.append((filename, similarity))
+                os.system(f'rm {file_path}')
 
         # Sort resumes based on similarity score
         ranked_resumes.sort(key=lambda x: x[1], reverse=True)
